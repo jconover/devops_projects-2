@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.5"
     }
   }
 }
@@ -33,16 +33,29 @@ resource "aws_internet_gateway" "demo_igw" {
 }
 
 # Create public subnet
-resource "aws_subnet" "demo_public_subnet" {
+resource "aws_subnet" "demo_public_subnet-01" {
   vpc_id                  = aws_vpc.demo_vpc.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "us-east-2a" # Change to match your region
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "demo_public_subnet"
+    Name = "demo_public_subnet-01"
   }
 }
+
+# Create public subnet
+resource "aws_subnet" "demo_public_subnet-02" {
+  vpc_id                  = aws_vpc.demo_vpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-2b" # Change to match your region
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "demo_public_subnet-02"
+  }
+}
+
 
 # Create route table
 resource "aws_route_table" "demo_public_rt" {
@@ -59,8 +72,13 @@ resource "aws_route_table" "demo_public_rt" {
 }
 
 # Associate route table with subnet
-resource "aws_route_table_association" "demo_public_rta" {
-  subnet_id      = aws_subnet.demo_public_subnet.id
+resource "aws_route_table_association" "demo_public_rta-01" {
+  subnet_id      = aws_subnet.demo_public_subnet-01.id
+  route_table_id = aws_route_table.demo_public_rt.id
+}
+
+resource "aws_route_table_association" "demo_public_rta-02" {
+  subnet_id      = aws_subnet.demo_public_subnet-02.id
   route_table_id = aws_route_table.demo_public_rt.id
 }
 
@@ -114,7 +132,7 @@ resource "aws_instance" "demo_instance" {
   instance_type          = "t3.micro"
   key_name               = "devops_projects" # Replace with your key pair name
   vpc_security_group_ids = [aws_security_group.demo_sg.id]
-  subnet_id             = aws_subnet.demo_public_subnet.id
+  subnet_id             = aws_subnet.demo_public_subnet-01.id
 
   tags = {
     Name = "demo_instance"
