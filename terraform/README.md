@@ -36,14 +36,15 @@ This configuration is now in its own directory. To deploy:
    ```bash
    cd terraform
    ```
+2. **See steps in private-key/README.md to create the private key first**
 
-2. **Set up your variables**:
+3. **Set up your variables**:
    ```bash
    cp terraform.tfvars.template terraform.tfvars
    # Edit terraform.tfvars with your SSH public key
    ```
 
-3. **Deploy**:
+4. **Deploy**:
    ```bash
    terraform init
    terraform plan
