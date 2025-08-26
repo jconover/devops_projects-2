@@ -43,3 +43,34 @@ output "ansible_public_ip" {
   description = "Public IP of Ansible instance"
   value       = aws_instance.demo-server["ansible"].public_ip
 }
+
+# Ansible-specific outputs
+output "ansible_inventory_content" {
+  description = "Content of the Ansible inventory file"
+  value       = <<-EOT
+[jenkins-master]
+${aws_instance.demo-server["jenkins-master"].private_ip}
+
+[jenkins-master:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/opt/terraform-key
+
+[jenkins-slave]
+${aws_instance.demo-server["jenkins-slave"].private_ip}
+
+[jenkins-slave:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/opt/terraform-key
+EOT
+}
+
+output "ansible_connection_info" {
+  description = "Connection information for Ansible setup"
+  value = {
+    ansible_server_ip = aws_instance.demo-server["ansible"].public_ip
+    jenkins_master_ip = aws_instance.demo-server["jenkins-master"].public_ip
+    jenkins_slave_ip  = aws_instance.demo-server["jenkins-slave"].public_ip
+    ssh_command       = "ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip}"
+    ansible_test_cmd  = "ansible -i /opt/hosts all -m ping"
+  }
+}

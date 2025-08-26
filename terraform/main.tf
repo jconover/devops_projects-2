@@ -166,3 +166,126 @@ resource "aws_instance" "demo-server" {
     Name = "${each.key}"
   }
 }
+
+# Ansible Setup Automation
+resource "null_resource" "ansible_setup" {
+  depends_on = [aws_instance.demo-server]
+
+  # Wait for instances to be fully ready
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Waiting for instances to be fully ready..."
+      sleep 30
+      echo "Instances should be ready now"
+    EOT
+  }
+
+  # Step 1: Copy SSH key to ansible server first
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Copying SSH key to ansible server..."
+      scp -i private-key/terraform-key -o StrictHostKeyChecking=no private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip}:~/terraform-key
+      echo "SSH key copied successfully"
+    EOT
+  }
+
+  # Step 2: Install Ansible on the ansible server
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Installing Ansible on ansible server..."
+      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        echo "Starting Ansible installation..."
+        sudo apt update -y
+        echo "System updated"
+        sudo apt install software-properties-common -y
+        echo "Software properties installed"
+        sudo add-apt-repository --yes --update ppa:ansible/ansible
+        echo "Ansible repository added"
+        sudo apt update -y
+        echo "Updated package list with Ansible repository"
+        sudo apt install ansible -y
+        echo "Ansible installation completed"
+        ansible --version
+      '
+    EOT
+  }
+
+  # Step 3: Create working directory and setup SSH key
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Setting up working directory and SSH key..."
+      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        sudo mkdir -p /opt
+        sudo chown ubuntu:ubuntu /opt
+        cp ~/terraform-key /opt/terraform-key
+        chmod 400 /opt/terraform-key
+        echo "Working directory and SSH key setup completed"
+      '
+    EOT
+  }
+
+  # Step 4: Create Ansible inventory file
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Creating Ansible inventory file..."
+      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        cat > /opt/hosts << EOF
+[jenkins-master]
+${aws_instance.demo-server["jenkins-master"].private_ip}
+
+[jenkins-master:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/opt/terraform-key
+
+[jenkins-slave]
+${aws_instance.demo-server["jenkins-slave"].private_ip}
+
+[jenkins-slave:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/opt/terraform-key
+EOF
+        echo "Ansible inventory file created"
+      '
+    EOT
+  }
+
+  # Step 5: Configure Ansible to use custom inventory
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Configuring Ansible to use custom inventory..."
+      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        sudo cp /etc/ansible/ansible.cfg /etc/ansible/ansible.cfg.backup
+        sudo sed -i "s|inventory = /etc/ansible/hosts|inventory = /opt/hosts|" /etc/ansible/ansible.cfg
+        echo "Ansible configuration updated"
+      '
+    EOT
+  }
+
+  # Step 6: Test Ansible connection
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Testing Ansible connection to all hosts..."
+      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        ansible -i /opt/hosts all -m ping
+      '
+    EOT
+  }
+
+  # Step 7: Display connection information
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "=== ANSIBLE SETUP COMPLETED ==="
+      echo "Ansible Server IP: ${aws_instance.demo-server["ansible"].public_ip}"
+      echo "Jenkins Master IP: ${aws_instance.demo-server["jenkins-master"].public_ip}"
+      echo "Jenkins Slave IP: ${aws_instance.demo-server["jenkins-slave"].public_ip}"
+      echo ""
+      echo "To connect to Ansible server:"
+      echo "ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip}"
+      echo ""
+      echo "To run Ansible commands from Ansible server:"
+      echo "ansible -i /opt/hosts all -m ping"
+      echo "ansible -i /opt/hosts jenkins-master -m shell -a 'hostname'"
+      echo "ansible -i /opt/hosts jenkins-slave -m shell -a 'hostname'"
+    EOT
+  }
+}

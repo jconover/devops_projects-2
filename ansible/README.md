@@ -1,6 +1,6 @@
 
 # Setup Ansible
-1. Install ansibe on Ubuntu 24.04 
+1. Install ansibe on the designated Ansible server running Ubuntu 24.04 
    ```sh 
    sudo apt update
    sudo apt install software-properties-common
