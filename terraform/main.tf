@@ -180,11 +180,17 @@ resource "null_resource" "ansible_setup" {
     EOT
   }
 
-  # Step 1: Copy SSH key to ansible server first
+  # Step 1: Accept host keys and copy SSH key to ansible server
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Accepting host keys for all servers..."
+      ssh-keyscan -H ${aws_instance.demo-server["ansible"].public_ip} >> ~/.ssh/known_hosts
+      ssh-keyscan -H ${aws_instance.demo-server["jenkins-master"].public_ip} >> ~/.ssh/known_hosts
+      ssh-keyscan -H ${aws_instance.demo-server["jenkins-slave"].public_ip} >> ~/.ssh/known_hosts
+      echo "Host keys accepted"
+      
       echo "Copying SSH key to ansible server..."
-      scp -i private-key/terraform-key -o StrictHostKeyChecking=no private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip}:~/terraform-key
+      scp -i private-key/terraform-key private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip}:~/terraform-key
       echo "SSH key copied successfully"
     EOT
   }
@@ -193,7 +199,7 @@ resource "null_resource" "ansible_setup" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Installing Ansible on ansible server..."
-      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+      ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
         echo "Starting Ansible installation..."
         sudo apt update -y
         echo "System updated"
@@ -214,7 +220,7 @@ resource "null_resource" "ansible_setup" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Setting up working directory and SSH key..."
-      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+      ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
         echo "Creating /opt directory..."
         sudo mkdir -p /opt
         sudo chown ubuntu:ubuntu /opt
@@ -234,16 +240,21 @@ resource "null_resource" "ansible_setup" {
     EOT
   }
 
-  # Step 4: Create Ansible inventory file
+  # Step 4: Create Ansible inventory file and accept host keys
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Creating Ansible inventory file..."
-      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+      echo "Creating Ansible inventory file and accepting host keys..."
+      ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
         echo "Verifying SSH key exists before creating inventory..."
         if [ ! -f "/opt/terraform-key" ]; then
           echo "ERROR: SSH key not found in /opt/terraform-key"
           exit 1
         fi
+        
+        echo "Accepting host keys for Jenkins servers..."
+        ssh-keyscan -H ${aws_instance.demo-server["jenkins-master"].private_ip} >> ~/.ssh/known_hosts
+        ssh-keyscan -H ${aws_instance.demo-server["jenkins-slave"].private_ip} >> ~/.ssh/known_hosts
+        echo "Host keys accepted for Jenkins servers"
         
         echo "Creating inventory file..."
         cat > /opt/hosts << EOF
@@ -272,7 +283,7 @@ EOF
   provisioner "local-exec" {
     command = <<-EOT
       echo "Configuring Ansible to use custom inventory..."
-      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+      ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
         sudo cp /etc/ansible/ansible.cfg /etc/ansible/ansible.cfg.backup
         sudo sed -i "s|inventory = /etc/ansible/hosts|inventory = /opt/hosts|" /etc/ansible/ansible.cfg
         echo "Ansible configuration updated"
@@ -284,7 +295,7 @@ EOF
   provisioner "local-exec" {
     command = <<-EOT
       echo "Testing Ansible connection to all hosts..."
-      ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+      ssh -i private-key/terraform-key ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
         ansible -i /opt/hosts all -m ping
       '
     EOT

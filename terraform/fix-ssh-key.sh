@@ -16,9 +16,13 @@ echo "=== Fixing SSH Key Setup ==="
 echo "Ansible Server IP: $ANSIBLE_IP"
 echo ""
 
+# Accept host key first
+echo "Accepting host key for ansible server..."
+ssh-keyscan -H "$ANSIBLE_IP" >> ~/.ssh/known_hosts 2>/dev/null
+
 # Fix SSH key setup
 echo "Fixing SSH key setup on ansible server..."
-ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@"$ANSIBLE_IP" '
+ssh -i "$SSH_KEY" ubuntu@"$ANSIBLE_IP" '
     echo "1. Creating /opt directory with proper permissions..."
     sudo mkdir -p /opt
     sudo chown ubuntu:ubuntu /opt

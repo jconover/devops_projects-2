@@ -21,6 +21,7 @@ The infrastructure consists of 3 EC2 instances:
 - **Automatic Ansible Installation**: Installed on the ansible server during Terraform deployment
 - **Dynamic Inventory**: Automatically generated with correct private IPs
 - **SSH Key Setup**: Properly configured with correct permissions
+- **Host Key Management**: Automatically accepts SSH host keys for all servers
 - **Connection Testing**: Validates Ansible connectivity to all hosts
 
 ## Quick Start
@@ -56,6 +57,7 @@ The infrastructure consists of 3 EC2 instances:
 
 1. **Infrastructure Creation**: Terraform creates VPC, subnets, security groups, and 3 EC2 instances
 2. **Ansible Setup**: After instances are ready, Terraform automatically:
+   - Accepts SSH host keys for all servers
    - Installs Ansible on the ansible server
    - Creates `/opt` working directory
    - Copies and configures SSH keys

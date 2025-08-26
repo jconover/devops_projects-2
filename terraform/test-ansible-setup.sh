@@ -37,9 +37,10 @@ else
     echo "✓ SSH key permissions are correct"
 fi
 
-# Test 3: Test SSH connectivity
-echo "3. Testing SSH connectivity..."
-if ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@"$ANSIBLE_IP" "echo 'SSH connection successful'" 2>/dev/null; then
+# Test 3: Accept host key and test SSH connectivity
+echo "3. Accepting host key and testing SSH connectivity..."
+ssh-keyscan -H "$ANSIBLE_IP" >> ~/.ssh/known_hosts 2>/dev/null
+if ssh -i "$SSH_KEY" -o ConnectTimeout=10 ubuntu@"$ANSIBLE_IP" "echo 'SSH connection successful'" 2>/dev/null; then
     echo "✓ SSH connection successful"
 else
     echo "ERROR: SSH connection failed"
