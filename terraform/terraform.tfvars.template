@@ -2,13 +2,13 @@
 aws_region = "us-east-1"
 
 # Project name (used for resource naming)
-project_name = "my-ec2-project"
+project_name = "demo"
 
 # VPC CIDR block
 vpc_cidr = "10.0.0.0/16"
 
 # Public subnet CIDR block
-public_subnet_cidr = "10.0.1.0/24"
+public_subnet_cidr-01 = "10.0.1.0/24"
 
 # SSH public key (replace with your actual public key)
 # You can generate one using: ssh-keygen -t rsa -b 2048 -f private-key/terraform-key

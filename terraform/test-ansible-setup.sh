@@ -80,6 +80,15 @@ ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@"$ANSIBLE_IP" '
         ls -la /opt/terraform-key
     else
         echo "ERROR: SSH key not found in /opt"
+        echo "Attempting to fix SSH key setup..."
+        sudo mkdir -p /opt
+        sudo chown ubuntu:ubuntu /opt
+        sudo chmod 755 /opt
+        sudo cp ~/terraform-key /opt/terraform-key
+        sudo chown ubuntu:ubuntu /opt/terraform-key
+        sudo chmod 400 /opt/terraform-key
+        echo "SSH key setup attempted. Checking again..."
+        ls -la /opt/terraform-key
     fi
 '
 

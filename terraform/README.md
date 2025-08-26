@@ -36,7 +36,28 @@ This configuration is now in its own directory. To deploy:
    ```bash
    cd terraform
    ```
-2. **See steps in private-key/README.md to create the private key first**
+2. **Create the private key first (this directory is in .gitingore so you dont accidently copy to github)**
+## Security Notice
+
+⚠️ **IMPORTANT**: This directory is excluded from version control via `.gitignore` to prevent accidentally committing sensitive files.
+
+## Usage
+
+    1. **Generate an SSH key pair** (if you don't have one):
+      
+       mkdir private-key
+       ssh-keygen -t rsa -b 2048 -f private-key/terraform-key
+      
+    
+    2. **Copy your public key** to use in `terraform.tfvars`:
+      
+       cat private-key/terraform-key.pub
+       
+    
+    3. **Set proper permissions** (on Unix-like systems):
+      
+       chmod 600 private-key/terraform-key
+       chmod 644 private-key/terraform-key.pub
 
 3. **Set up your variables**:
    ```bash

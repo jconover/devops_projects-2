@@ -215,10 +215,20 @@ resource "null_resource" "ansible_setup" {
     command = <<-EOT
       echo "Setting up working directory and SSH key..."
       ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        echo "Creating /opt directory..."
         sudo mkdir -p /opt
         sudo chown ubuntu:ubuntu /opt
-        cp ~/terraform-key /opt/terraform-key
-        chmod 400 /opt/terraform-key
+        sudo chmod 755 /opt
+        echo "Directory created and permissions set"
+        
+        echo "Copying SSH key to /opt..."
+        sudo cp ~/terraform-key /opt/terraform-key
+        sudo chown ubuntu:ubuntu /opt/terraform-key
+        sudo chmod 400 /opt/terraform-key
+        echo "SSH key copied and permissions set"
+        
+        echo "Verifying SSH key setup..."
+        ls -la /opt/terraform-key
         echo "Working directory and SSH key setup completed"
       '
     EOT
@@ -229,6 +239,13 @@ resource "null_resource" "ansible_setup" {
     command = <<-EOT
       echo "Creating Ansible inventory file..."
       ssh -i private-key/terraform-key -o StrictHostKeyChecking=no ubuntu@${aws_instance.demo-server["ansible"].public_ip} '
+        echo "Verifying SSH key exists before creating inventory..."
+        if [ ! -f "/opt/terraform-key" ]; then
+          echo "ERROR: SSH key not found in /opt/terraform-key"
+          exit 1
+        fi
+        
+        echo "Creating inventory file..."
         cat > /opt/hosts << EOF
 [jenkins-master]
 ${aws_instance.demo-server["jenkins-master"].private_ip}
@@ -245,6 +262,8 @@ ansible_user=ubuntu
 ansible_ssh_private_key_file=/opt/terraform-key
 EOF
         echo "Ansible inventory file created"
+        echo "Inventory file contents:"
+        cat /opt/hosts
       '
     EOT
   }

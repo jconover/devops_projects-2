@@ -156,7 +156,13 @@ If Ansible isn't getting installed, try these steps:
    ./test-ansible-setup.sh <ansible-server-ip>
    ```
 
-2. **Manual installation** if the automated setup fails:
+2. **Fix SSH key setup** if you see "Permission denied" errors:
+   ```bash
+   cd terraform
+   ./fix-ssh-key.sh <ansible-server-ip>
+   ```
+
+3. **Manual installation** if the automated setup fails:
    ```bash
    # Connect to ansible server
    ssh -i private-key/terraform-key ubuntu@<ansible-server-ip>
@@ -169,11 +175,12 @@ If Ansible isn't getting installed, try these steps:
    sudo apt install ansible -y
    ```
 
-3. **Check common issues**:
+4. **Check common issues**:
    - SSH key permissions (should be 400)
    - Instance fully booted (wait 2-3 minutes after creation)
    - Security group allows SSH access
    - Network connectivity between instances
+   - `/opt` directory permissions (should be 755, owned by ubuntu)
 
 ### Ansible Connection Issues
 - Verify SSH key is properly copied to `/opt/terraform-key` on ansible server
