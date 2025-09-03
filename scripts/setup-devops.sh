@@ -2,6 +2,7 @@
 
 # DevOps Stack Setup Script
 # This script sets up a complete DevOps infrastructure with all tools
+
 set -e
 
 # Colors for output
@@ -49,7 +50,7 @@ check_prerequisites() {
     done
     
     # Check Docker daemon
-    if ! docker info &> /dev/null; then
+    if ! docker info &> /dev/null && ! sudo docker info &> /dev/null; then
         error "Docker daemon is not running"
     fi
     
@@ -101,7 +102,7 @@ setup_docker() {
     local images=(
         "jenkins/jenkins:lts-jdk17"
         "sonarqube:10.2.1-community"
-        "releases-docker.jfrog.io/jfrog/artifactory-pro:7.69.6"
+        "sonatype/nexus3:latest"
         "prom/prometheus:v2.47.0"
         "grafana/grafana:10.1.5"
         "postgres:15-alpine"
@@ -207,8 +208,6 @@ setup_docker_compose() {
     
     # Create development override
     cat > docker-compose.override.yml << EOF
-version: '3.8'
-
 services:
   # Development overrides
   jenkins:
