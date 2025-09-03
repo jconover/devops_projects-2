@@ -1,0 +1,30 @@
+apiVersion: v2
+name: app
+description: A Helm chart for deploying applications to Kubernetes
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - application
+  - deployment
+  - kubernetes
+
+home: https://github.com/jconover/devops-project
+sources:
+  - https://github.com/jconover/devops-project
+
+maintainers:
+  - name: DevOps Team
+    email: justin.conover@devopsnexus.io
+
+dependencies:
+  - name: postgresql
+    version: 12.5.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.0.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+
