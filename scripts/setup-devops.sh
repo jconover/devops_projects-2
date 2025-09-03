@@ -2,7 +2,6 @@
 
 # DevOps Stack Setup Script
 # This script sets up a complete DevOps infrastructure with all tools
-
 set -e
 
 # Colors for output
