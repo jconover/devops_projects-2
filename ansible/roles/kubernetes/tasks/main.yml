@@ -1,0 +1,178 @@
+---
+- name: Disable swap
+  command: swapoff -a
+  changed_when: false
+
+- name: Remove swap from fstab
+  lineinfile:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    state: absent
+
+- name: Load kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+
+- name: Set kernel parameters
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - name: net.bridge.bridge-nf-call-iptables
+      value: "1"
+    - name: net.bridge.bridge-nf-call-ip6tables
+      value: "1"
+    - name: net.ipv4.ip_forward
+      value: "1"
+
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+
+- name: Add Kubernetes GPG key
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add Kubernetes repository
+  apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+    filename: kubernetes
+
+- name: Install Docker and Kubernetes packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - kubelet={{ kubernetes_version }}-00
+      - kubeadm={{ kubernetes_version }}-00
+      - kubectl={{ kubernetes_version }}-00
+    state: present
+    update_cache: yes
+
+- name: Configure containerd
+  template:
+    src: containerd.conf.j2
+    dest: /etc/containerd/config.toml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart containerd
+
+- name: Start and enable services
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - docker
+    - containerd
+    - kubelet
+
+- name: Initialize Kubernetes master
+  command: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={{ ansible_default_ipv4.address }}
+  when: "'kubernetes-master' in group_names"
+  register: kubeadm_init
+  changed_when: kubeadm_init.rc == 0
+
+- name: Create .kube directory
+  file:
+    path: /home/devops/.kube
+    state: directory
+    owner: devops
+    group: devops
+    mode: '0755'
+  when: "'kubernetes-master' in group_names"
+
+- name: Copy kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/devops/.kube/config
+    owner: devops
+    group: devops
+    mode: '0644'
+  when: "'kubernetes-master' in group_names"
+
+- name: Install Flannel CNI
+  command: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+  become: yes
+  become_user: devops
+  when: "'kubernetes-master' in group_names"
+
+- name: Get join command
+  command: kubeadm token create --print-join-command
+  register: join_command
+  when: "'kubernetes-master' in group_names"
+
+- name: Join worker nodes
+  command: "{{ hostvars[groups['kubernetes-master'][0]]['join_command']['stdout'] }}"
+  when: "'kubernetes-worker' in group_names"
+  register: join_result
+  changed_when: join_result.rc == 0
+
+- name: Install Helm
+  shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    creates: /usr/local/bin/helm
+  become: yes
+
+- name: Add Helm repositories
+  command: "{{ item }}"
+  become: yes
+  become_user: devops
+  loop:
+    - helm repo add stable https://charts.helm.sh/stable
+    - helm repo add bitnami https://charts.bitnami.com/bitnami
+    - helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    - helm repo add grafana https://grafana.github.io/helm-charts
+    - helm repo update
+
+- name: Install Kubernetes dashboard
+  command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+  become: yes
+  become_user: devops
+  when: "'kubernetes-master' in group_names"
+
+- name: Create dashboard admin user
+  template:
+    src: dashboard-admin.yaml.j2
+    dest: /tmp/dashboard-admin.yaml
+    owner: devops
+    group: devops
+    mode: '0644'
+  when: "'kubernetes-master' in group_names"
+
+- name: Apply dashboard admin user
+  command: kubectl apply -f /tmp/dashboard-admin.yaml
+  become: yes
+  become_user: devops
+  when: "'kubernetes-master' in group_names"
+
+- name: Install metrics server
+  command: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  become: yes
+  become_user: devops
+  when: "'kubernetes-master' in group_names"
+
+- name: Patch metrics server
+  command: kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+  become: yes
+  become_user: devops
+  when: "'kubernetes-master' in group_names"
+

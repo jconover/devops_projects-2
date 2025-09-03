@@ -1,0 +1,194 @@
+---
+- name: Install Java
+  apt:
+    name: openjdk-11-jdk
+    state: present
+
+- name: Create JFrog user
+  user:
+    name: artifactory
+    shell: /bin/bash
+    home: /opt/artifactory
+    system: yes
+
+- name: Download JFrog Artifactory
+  get_url:
+    url: "https://releases.jfrog.io/artifactory/artifactory-pro/org/artifactory/pro/jfrog-artifactory-pro/{{ jfrog_version }}/jfrog-artifactory-pro-{{ jfrog_version }}-linux.tar.gz"
+    dest: /tmp/jfrog-artifactory-pro-{{ jfrog_version }}-linux.tar.gz
+    mode: '0644'
+
+- name: Extract JFrog Artifactory
+  unarchive:
+    src: /tmp/jfrog-artifactory-pro-{{ jfrog_version }}-linux.tar.gz
+    dest: /opt
+    remote_src: yes
+    creates: /opt/artifactory-pro-{{ jfrog_version }}
+
+- name: Create JFrog symlink
+  file:
+    src: /opt/artifactory-pro-{{ jfrog_version }}
+    dest: /opt/artifactory
+    state: link
+
+- name: Set JFrog ownership
+  file:
+    path: /opt/artifactory
+    owner: artifactory
+    group: artifactory
+    recurse: yes
+
+- name: Create JFrog directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: artifactory
+    group: artifactory
+    mode: '0755'
+  loop:
+    - /opt/artifactory/var
+    - /opt/artifactory/etc
+    - /opt/artifactory/logs
+    - /opt/artifactory/data
+    - /opt/artifactory/backup
+    - /opt/artifactory/temp
+
+- name: Configure JFrog Artifactory
+  template:
+    src: artifactory.config.xml.j2
+    dest: /opt/artifactory/etc/artifactory.config.xml
+    owner: artifactory
+    group: artifactory
+    mode: '0644'
+
+- name: Create JFrog systemd service
+  template:
+    src: artifactory.service.j2
+    dest: /etc/systemd/system/artifactory.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Start and enable JFrog Artifactory service
+  systemd:
+    name: artifactory
+    state: started
+    enabled: yes
+
+- name: Wait for JFrog Artifactory to start
+  uri:
+    url: http://localhost:8081/artifactory
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 10
+
+- name: Create default repositories
+  uri:
+    url: "http://localhost:8081/artifactory/api/repositories/{{ item.name }}"
+    method: PUT
+    body_format: json
+    body: "{{ item.config }}"
+    user: admin
+    password: password
+    force_basic_auth: yes
+    status_code: [200, 201, 409]
+  loop:
+    - name: maven-local
+      config:
+        key: maven-local
+        rclass: local
+        packageType: maven
+        description: "Local Maven repository"
+    - name: maven-remote
+      config:
+        key: maven-remote
+        rclass: remote
+        packageType: maven
+        url: "https://repo1.maven.org/maven2"
+        description: "Remote Maven repository"
+    - name: maven-virtual
+      config:
+        key: maven-virtual
+        rclass: virtual
+        packageType: maven
+        repositories: ["maven-local", "maven-remote"]
+        description: "Virtual Maven repository"
+    - name: docker-local
+      config:
+        key: docker-local
+        rclass: local
+        packageType: docker
+        description: "Local Docker repository"
+    - name: npm-local
+      config:
+        key: npm-local
+        rclass: local
+        packageType: npm
+        description: "Local NPM repository"
+    - name: generic-local
+      config:
+        key: generic-local
+        rclass: local
+        packageType: generic
+        description: "Local Generic repository"
+  ignore_errors: yes
+
+- name: Configure JFrog permissions
+  uri:
+    url: "http://localhost:8081/artifactory/api/security/permissions/{{ item.name }}"
+    method: PUT
+    body_format: json
+    body: "{{ item.config }}"
+    user: admin
+    password: password
+    force_basic_auth: yes
+    status_code: [200, 201, 409]
+  loop:
+    - name: developers
+      config:
+        name: developers
+        repositories: ["maven-local", "maven-virtual", "docker-local", "npm-local", "generic-local"]
+        principals:
+          users:
+            devops: ["r", "w", "d", "n"]
+          groups:
+            developers: ["r", "w", "d", "n"]
+    - name: readers
+      config:
+        name: readers
+        repositories: ["maven-virtual", "docker-local", "npm-local", "generic-local"]
+        principals:
+          groups:
+            readers: ["r"]
+  ignore_errors: yes
+
+- name: Create JFrog users
+  uri:
+    url: "http://localhost:8081/artifactory/api/security/users/{{ item.name }}"
+    method: PUT
+    body_format: json
+    body: "{{ item.config }}"
+    user: admin
+    password: password
+    force_basic_auth: yes
+    status_code: [200, 201, 409]
+  loop:
+    - name: jenkins
+      config:
+        name: jenkins
+        email: jenkins@example.com
+        password: "{{ jenkins_artifactory_password }}"
+        groups: ["developers"]
+    - name: maven
+      config:
+        name: maven
+        email: maven@example.com
+        password: "{{ maven_artifactory_password }}"
+        groups: ["developers"]
+  ignore_errors: yes
+

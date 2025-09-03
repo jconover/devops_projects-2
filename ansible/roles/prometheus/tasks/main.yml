@@ -1,0 +1,162 @@
+---
+- name: Create Prometheus user
+  user:
+    name: prometheus
+    shell: /bin/bash
+    home: /opt/prometheus
+    system: yes
+
+- name: Create Prometheus directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+  loop:
+    - /opt/prometheus
+    - /opt/prometheus/config
+    - /opt/prometheus/data
+    - /opt/prometheus/rules
+    - /opt/prometheus/templates
+
+- name: Download Prometheus
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: /tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
+    mode: '0644'
+
+- name: Extract Prometheus
+  unarchive:
+    src: /tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
+    dest: /opt
+    remote_src: yes
+    creates: /opt/prometheus-{{ prometheus_version }}.linux-amd64
+
+- name: Create Prometheus symlink
+  file:
+    src: /opt/prometheus-{{ prometheus_version }}.linux-amd64
+    dest: /opt/prometheus-current
+    state: link
+
+- name: Copy Prometheus binaries
+  copy:
+    src: /opt/prometheus-current/{{ item }}
+    dest: /usr/local/bin/{{ item }}
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+    remote_src: yes
+  loop:
+    - prometheus
+    - promtool
+
+- name: Configure Prometheus
+  template:
+    src: prometheus.yml.j2
+    dest: /opt/prometheus/config/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+
+- name: Configure Prometheus rules
+  template:
+    src: rules.yml.j2
+    dest: /opt/prometheus/rules/rules.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+
+- name: Create Prometheus systemd service
+  template:
+    src: prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Start and enable Prometheus service
+  systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+
+- name: Wait for Prometheus to start
+  uri:
+    url: http://localhost:9090/-/ready
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 10
+
+- name: Install Node Exporter
+  apt:
+    name: prometheus-node-exporter
+    state: present
+
+- name: Start and enable Node Exporter
+  systemd:
+    name: prometheus-node-exporter
+    state: started
+    enabled: yes
+
+- name: Configure Node Exporter
+  template:
+    src: node-exporter.service.j2
+    dest: /etc/systemd/system/prometheus-node-exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install cAdvisor for Docker monitoring
+  docker_container:
+    name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    state: started
+    restart_policy: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - name: monitoring-network
+
+- name: Install Alertmanager
+  docker_container:
+    name: alertmanager
+    image: prom/alertmanager:v0.26.0
+    state: started
+    restart_policy: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - /opt/prometheus/alertmanager:/etc/alertmanager
+    command: --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager
+    networks:
+      - name: monitoring-network
+
+- name: Configure Alertmanager
+  template:
+    src: alertmanager.yml.j2
+    dest: /opt/prometheus/alertmanager/alertmanager.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+
+- name: Create Alertmanager directory
+  file:
+    path: /opt/prometheus/alertmanager
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+

@@ -1,0 +1,84 @@
+---
+- name: Set timezone
+  timezone:
+    name: UTC
+
+- name: Configure hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Update /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "127.0.0.1 localhost"
+    - "::1 localhost ip6-localhost ip6-loopback"
+    - "ff02::1 ip6-allnodes"
+    - "ff02::2 ip6-allrouters"
+
+- name: Configure SSH
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart ssh
+
+- name: Create devops user
+  user:
+    name: devops
+    shell: /bin/bash
+    groups: sudo,docker
+    append: yes
+    password: "{{ devops_password | password_hash('sha512') }}"
+    state: present
+
+- name: Configure sudo for devops user
+  lineinfile:
+    path: /etc/sudoers
+    line: "devops ALL=(ALL) NOPASSWD:ALL"
+    state: present
+    validate: 'visudo -cf %s'
+
+- name: Create application directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: devops
+    group: devops
+    mode: '0755'
+  loop:
+    - /opt/applications
+    - /opt/data
+    - /opt/logs
+    - /opt/configs
+    - /opt/backups
+
+- name: Configure firewall
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - 22    # SSH
+    - 80    # HTTP
+    - 443   # HTTPS
+    - 8080  # Jenkins
+    - 9000  # SonarQube
+    - 8081  # JFrog Artifactory
+    - 3000  # Grafana
+    - 9090  # Prometheus
+    - 6443  # Kubernetes API
+    - 10250 # Kubelet
+    - 10255 # Kubelet read
+    - 2379  # etcd
+    - 2380  # etcd peer
+    - 10251 # kube-scheduler
+    - 10252 # kube-controller-manager
+

@@ -1,0 +1,50 @@
+---
+- name: Complete DevOps Toolchain Setup
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    jenkins_version: "2.414.3"
+    docker_version: "24.0.7"
+    kubernetes_version: "1.28.0"
+    sonarqube_version: "10.2.1.78527"
+    jfrog_version: "7.69.6"
+    prometheus_version: "2.47.0"
+    grafana_version: "10.1.5"
+    maven_version: "3.9.5"
+    
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      
+    - name: Install common packages
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - unzip
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+  roles:
+    - role: common
+    - role: docker
+    - role: jenkins
+    - role: maven
+    - role: sonarqube
+    - role: jfrog
+    - role: kubernetes
+    - role: prometheus
+    - role: grafana
+    - role: monitoring
+

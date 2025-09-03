@@ -1,0 +1,82 @@
+---
+- name: Download Maven
+  get_url:
+    url: "https://archive.apache.org/dist/maven/maven-3/{{ maven_version }}/binaries/apache-maven-{{ maven_version }}-bin.tar.gz"
+    dest: /tmp/apache-maven-{{ maven_version }}-bin.tar.gz
+    mode: '0644'
+
+- name: Extract Maven
+  unarchive:
+    src: /tmp/apache-maven-{{ maven_version }}-bin.tar.gz
+    dest: /opt
+    remote_src: yes
+    creates: /opt/apache-maven-{{ maven_version }}
+
+- name: Create Maven symlink
+  file:
+    src: /opt/apache-maven-{{ maven_version }}
+    dest: /opt/maven
+    state: link
+
+- name: Set Maven environment variables
+  lineinfile:
+    path: /etc/environment
+    line: "{{ item }}"
+    state: present
+  loop:
+    - "MAVEN_HOME=/opt/maven"
+    - "M2_HOME=/opt/maven"
+
+- name: Add Maven to PATH
+  lineinfile:
+    path: /etc/profile.d/maven.sh
+    line: "{{ item }}"
+    state: present
+    create: yes
+  loop:
+    - "export MAVEN_HOME=/opt/maven"
+    - "export M2_HOME=/opt/maven"
+    - "export PATH=\$PATH:\$MAVEN_HOME/bin"
+
+- name: Create Maven settings directory
+  file:
+    path: /home/devops/.m2
+    state: directory
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Configure Maven settings
+  template:
+    src: settings.xml.j2
+    dest: /home/devops/.m2/settings.xml
+    owner: devops
+    group: devops
+    mode: '0644'
+
+- name: Create Maven local repository
+  file:
+    path: /opt/maven-repo
+    state: directory
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Install Maven wrapper
+  shell: |
+    cd /opt
+    /opt/maven/bin/mvn wrapper:wrapper
+  args:
+    creates: /opt/mvnw
+  become: yes
+  become_user: devops
+
+- name: Verify Maven installation
+  shell: /opt/maven/bin/mvn --version
+  register: maven_version_output
+  changed_when: false
+
+- name: Display Maven version
+  debug:
+    msg: "{{ maven_version_output.stdout_lines }}"
+

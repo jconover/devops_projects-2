@@ -1,0 +1,160 @@
+---
+- name: Create monitoring scripts directory
+  file:
+    path: /opt/monitoring/scripts
+    state: directory
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create health check script
+  template:
+    src: health-check.sh.j2
+    dest: /opt/monitoring/scripts/health-check.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create service monitoring script
+  template:
+    src: service-monitor.sh.j2
+    dest: /opt/monitoring/scripts/service-monitor.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create log monitoring script
+  template:
+    src: log-monitor.sh.j2
+    dest: /opt/monitoring/scripts/log-monitor.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create backup script
+  template:
+    src: backup.sh.j2
+    dest: /opt/monitoring/scripts/backup.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create monitoring cron jobs
+  cron:
+    name: "{{ item.name }}"
+    job: "{{ item.job }}"
+    minute: "{{ item.minute }}"
+    hour: "{{ item.hour }}"
+    user: devops
+  loop:
+    - name: "Health Check"
+      job: "/opt/monitoring/scripts/health-check.sh"
+      minute: "*/5"
+      hour: "*"
+    - name: "Service Monitor"
+      job: "/opt/monitoring/scripts/service-monitor.sh"
+      minute: "*/2"
+      hour: "*"
+    - name: "Log Monitor"
+      job: "/opt/monitoring/scripts/log-monitor.sh"
+      minute: "*/10"
+      hour: "*"
+    - name: "Daily Backup"
+      job: "/opt/monitoring/scripts/backup.sh"
+      minute: "0"
+      hour: "2"
+
+- name: Create monitoring dashboard
+  template:
+    src: monitoring-dashboard.html.j2
+    dest: /opt/monitoring/dashboard.html
+    owner: devops
+    group: devops
+    mode: '0644'
+
+- name: Create monitoring configuration
+  template:
+    src: monitoring.conf.j2
+    dest: /opt/monitoring/monitoring.conf
+    owner: devops
+    group: devops
+    mode: '0644'
+
+- name: Install monitoring dependencies
+  apt:
+    name:
+      - jq
+      - curl
+      - wget
+      - htop
+      - iotop
+      - nethogs
+      - iftop
+      - ncdu
+      - tree
+      - rsync
+    state: present
+
+- name: Create log rotation configuration
+  template:
+    src: logrotate.conf.j2
+    dest: /etc/logrotate.d/devops
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create system monitoring service
+  template:
+    src: system-monitor.service.j2
+    dest: /etc/systemd/system/system-monitor.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Start and enable system monitoring service
+  systemd:
+    name: system-monitor
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Create monitoring alerts
+  template:
+    src: alerts.yml.j2
+    dest: /opt/monitoring/alerts.yml
+    owner: devops
+    group: devops
+    mode: '0644'
+
+- name: Create performance monitoring script
+  template:
+    src: performance-monitor.sh.j2
+    dest: /opt/monitoring/scripts/performance-monitor.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create security monitoring script
+  template:
+    src: security-monitor.sh.j2
+    dest: /opt/monitoring/scripts/security-monitor.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create integration tests
+  template:
+    src: integration-tests.sh.j2
+    dest: /opt/monitoring/scripts/integration-tests.sh
+    owner: devops
+    group: devops
+    mode: '0755'
+
+- name: Create monitoring documentation
+  template:
+    src: monitoring-readme.md.j2
+    dest: /opt/monitoring/README.md
+    owner: devops
+    group: devops
+    mode: '0644'
+

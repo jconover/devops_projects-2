@@ -1,0 +1,184 @@
+---
+- name: Add Grafana GPG key
+  apt_key:
+    url: https://packages.grafana.com/gpg.key
+    state: present
+
+- name: Add Grafana repository
+  apt_repository:
+    repo: "deb https://packages.grafana.com/oss/deb stable main"
+    state: present
+    filename: grafana
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+    update_cache: yes
+
+- name: Create Grafana directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: '0755'
+  loop:
+    - /opt/grafana/provisioning/datasources
+    - /opt/grafana/provisioning/dashboards
+    - /opt/grafana/dashboards
+    - /opt/grafana/plugins
+
+- name: Configure Grafana
+  template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Configure Grafana datasources
+  template:
+    src: datasources.yml.j2
+    dest: /opt/grafana/provisioning/datasources/datasources.yml
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Configure Grafana dashboards
+  template:
+    src: dashboards.yml.j2
+    dest: /opt/grafana/provisioning/dashboards/dashboards.yml
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Start and enable Grafana service
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+
+- name: Wait for Grafana to start
+  uri:
+    url: http://localhost:3000/api/health
+    status_code: 200
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 10
+
+- name: Create Grafana admin user
+  uri:
+    url: http://localhost:3000/api/admin/users
+    method: POST
+    body_format: json
+    body:
+      name: "{{ grafana_admin_user }}"
+      email: "{{ grafana_admin_email }}"
+      login: "{{ grafana_admin_user }}"
+      password: "{{ grafana_admin_password }}"
+    status_code: [200, 201, 412]
+  ignore_errors: yes
+
+- name: Install Grafana plugins
+  command: "{{ item }}"
+  become: yes
+  become_user: grafana
+  loop:
+    - grafana-cli plugins install grafana-piechart-panel
+    - grafana-cli plugins install grafana-worldmap-panel
+    - grafana-cli plugins install grafana-clock-panel
+    - grafana-cli plugins install grafana-simple-json-datasource
+    - grafana-cli plugins install grafana-azure-monitor-datasource
+    - grafana-cli plugins install grafana-cloudwatch-datasource
+    - grafana-cli plugins install grafana-elasticsearch-datasource
+    - grafana-cli plugins install grafana-graphite-datasource
+    - grafana-cli plugins install grafana-influxdb-datasource
+    - grafana-cli plugins install grafana-mysql-datasource
+    - grafana-cli plugins install grafana-postgres-datasource
+    - grafana-cli plugins install grafana-prometheus-datasource
+    - grafana-cli plugins install grafana-stackdriver-datasource
+    - grafana-cli plugins install grafana-zabbix-datasource
+  ignore_errors: yes
+
+- name: Create system monitoring dashboard
+  template:
+    src: system-dashboard.json.j2
+    dest: /opt/grafana/dashboards/system-dashboard.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+
+- name: Create Docker monitoring dashboard
+  template:
+    src: docker-dashboard.json.j2
+    dest: /opt/grafana/dashboards/docker-dashboard.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+
+- name: Create Kubernetes monitoring dashboard
+  template:
+    src: kubernetes-dashboard.json.j2
+    dest: /opt/grafana/dashboards/kubernetes-dashboard.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+
+- name: Create Jenkins monitoring dashboard
+  template:
+    src: jenkins-dashboard.json.j2
+    dest: /opt/grafana/dashboards/jenkins-dashboard.json
+    owner: grafana
+    group: grafana
+    mode: '0644'
+
+- name: Configure Grafana alerting
+  template:
+    src: alerting.yml.j2
+    dest: /opt/grafana/provisioning/alerting/alerting.yml
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  notify: restart grafana
+
+- name: Create Grafana notification channels
+  uri:
+    url: http://localhost:3000/api/alert-notifications
+    method: POST
+    body_format: json
+    body: "{{ item }}"
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    status_code: [200, 201, 409]
+  loop:
+    - name: "Email Alerts"
+      type: email
+      isDefault: true
+      settings:
+        addresses: "{{ grafana_alert_email }}"
+    - name: "Slack Alerts"
+      type: slack
+      isDefault: false
+      settings:
+        url: "{{ grafana_slack_webhook }}"
+  ignore_errors: yes
+
+- name: Configure Grafana organization
+  uri:
+    url: http://localhost:3000/api/org
+    method: PUT
+    body_format: json
+    body:
+      name: "{{ grafana_org_name }}"
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    status_code: [200, 201]
+  ignore_errors: yes
+
