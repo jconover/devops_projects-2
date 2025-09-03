@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <!-- Local Repository -->
+  <localRepository>/opt/maven-repo</localRepository>
+
+  <!-- Interactive Mode -->
+  <interactiveMode>false</interactiveMode>
+
+  <!-- Offline Mode -->
+  <offline>false</offline>
+
+  <!-- Mirror Configuration -->
+  <mirrors>
+    <!-- JFrog Artifactory Mirror -->
+    <mirror>
+      <id>artifactory-central</id>
+      <name>JFrog Artifactory Central</name>
+      <url>http://jfrog:8081/artifactory/maven-virtual</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+    
+    <!-- Local Artifactory Mirror for all repositories -->
+    <mirror>
+      <id>artifactory-all</id>
+      <name>JFrog Artifactory All</name>
+      <url>http://jfrog:8081/artifactory/maven-virtual</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <!-- Profile Configuration -->
+  <profiles>
+    <!-- Development Profile -->
+    <profile>
+      <id>dev</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <env>dev</env>
+        <maven.test.skip>false</maven.test.skip>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      </properties>
+      <repositories>
+        <repository>
+          <id>artifactory-dev</id>
+          <name>JFrog Artifactory Development</name>
+          <url>http://jfrog:8081/artifactory/maven-local</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>artifactory-dev</id>
+          <name>JFrog Artifactory Development</name>
+          <url>http://jfrog:8081/artifactory/maven-local</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+
+    <!-- Production Profile -->
+    <profile>
+      <id>prod</id>
+      <properties>
+        <env>prod</env>
+        <maven.test.skip>true</maven.test.skip>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      </properties>
+      <repositories>
+        <repository>
+          <id>artifactory-prod</id>
+          <name>JFrog Artifactory Production</name>
+          <url>http://jfrog:8081/artifactory/maven-local</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+    </profile>
+
+    <!-- SonarQube Profile -->
+    <profile>
+      <id>sonar</id>
+      <properties>
+        <sonar.host.url>http://sonarqube:9000</sonar.host.url>
+        <sonar.login>admin</sonar.login>
+        <sonar.password>admin</sonar.password>
+        <sonar.projectKey>${project.groupId}:${project.artifactId}</sonar.projectKey>
+        <sonar.projectName>${project.name}</sonar.projectName>
+        <sonar.projectVersion>${project.version}</sonar.projectVersion>
+        <sonar.sources>src/main/java</sonar.sources>
+        <sonar.tests>src/test/java</sonar.tests>
+        <sonar.java.binaries>target/classes</sonar.java.binaries>
+        <sonar.java.test.binaries>target/test-classes</sonar.java.test.binaries>
+        <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+      </properties>
+    </profile>
+
+    <!-- Docker Profile -->
+    <profile>
+      <id>docker</id>
+      <properties>
+        <docker.host>unix:///var/run/docker.sock</docker.host>
+        <docker.registry>localhost:8081</docker.registry>
+        <docker.username>admin</docker.username>
+        <docker.password>password</docker.password>
+      </properties>
+    </profile>
+
+    <!-- Kubernetes Profile -->
+    <profile>
+      <id>kubernetes</id>
+      <properties>
+        <kubernetes.namespace>devops-demo</kubernetes.namespace>
+        <kubernetes.cluster>devops-cluster</kubernetes.cluster>
+        <kubernetes.context>devops-context</kubernetes.context>
+      </properties>
+    </profile>
+  </profiles>
+
+  <!-- Active Profiles -->
+  <activeProfiles>
+    <activeProfile>dev</activeProfile>
+    <activeProfile>sonar</activeProfile>
+  </activeProfiles>
+
+  <!-- Server Authentication -->
+  <servers>
+    <!-- JFrog Artifactory Server -->
+    <server>
+      <id>artifactory-dev</id>
+      <username>admin</username>
+      <password>password</password>
+    </server>
+    
+    <server>
+      <id>artifactory-prod</id>
+      <username>admin</username>
+      <password>password</password>
+    </server>
+
+    <!-- Docker Registry Server -->
+    <server>
+      <id>docker-registry</id>
+      <username>admin</username>
+      <password>password</password>
+    </server>
+
+    <!-- GitHub Packages Server -->
+    <server>
+      <id>github</id>
+      <username>${env.GITHUB_USERNAME}</username>
+      <password>${env.GITHUB_TOKEN}</password>
+    </server>
+  </servers>
+
+  <!-- Plugin Groups -->
+  <pluginGroups>
+    <pluginGroup>org.apache.maven.plugins</pluginGroup>
+    <pluginGroup>org.codehaus.mojo</pluginGroup>
+    <pluginGroup>org.sonarsource.scanner.maven</pluginGroup>
+    <pluginGroup>io.fabric8</pluginGroup>
+    <pluginGroup>com.spotify</pluginGroup>
+  </pluginGroups>
+
+  <!-- Proxy Configuration -->
+  <proxies>
+    <!-- Uncomment and configure if behind corporate proxy
+    <proxy>
+      <id>optional</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>proxy.company.com</host>
+      <port>8080</port>
+      <nonProxyHosts>localhost|127.0.0.1</nonProxyHosts>
+    </proxy>
+    -->
+  </proxies>
+
+  <!-- Environment Variables -->
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+    <maven.compiler.fork>true</maven.compiler.fork>
+    <maven.compiler.verbose>true</maven.compiler.verbose>
+    <maven.compiler.optimize>true</maven.compiler.optimize>
+    <maven.compiler.debug>true</maven.compiler.debug>
+    <maven.compiler.debuglevel>lines,vars,source</maven.compiler.debuglevel>
+    <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
+    <maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+    <maven.compiler.release>17</maven.compiler.release>
+  </properties>
+
+</settings>
+
