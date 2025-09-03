@@ -1,30 +1,74 @@
-# DevOps Infrastructure with Terraform and Ansible Integration
+# Complete DevOps Infrastructure with Full Toolchain
 
-This project demonstrates a complete DevOps infrastructure setup using Terraform to provision AWS resources and automatically configure Ansible for infrastructure management.
+This project demonstrates a comprehensive DevOps infrastructure setup using Terraform to provision AWS resources and automatically configure a complete DevOps toolchain.
 
-## Architecture
+## 🛠️ DevOps Toolchain
 
-The infrastructure consists of 3 EC2 instances:
+### ✅ Infrastructure as Code
+- **Terraform**: Infrastructure provisioning and management
+- **Ansible**: Configuration management and automation
+
+### ✅ CI/CD Pipeline
+- **GitHub**: Source code management and version control
+- **Jenkins**: Continuous Integration and Continuous Deployment
+- **Maven**: Build automation and dependency management
+
+### ✅ Container & Orchestration
+- **Docker**: Containerization platform
+- **Kubernetes**: Container orchestration
+- **Helm Charts**: Kubernetes package manager
+
+### ✅ Code Quality & Security
+- **SonarQube**: Code quality and security analysis
+- **JFrog Artifactory**: Binary repository management
+
+### ✅ Monitoring & Observability
+- **Prometheus**: Metrics collection and monitoring
+- **Grafana**: Data visualization and dashboards
+
+## 🏗️ Architecture
+
+The infrastructure consists of multiple EC2 instances:
 - **ansible**: Management server with Ansible installed and configured
 - **jenkins-master**: Jenkins master server
 - **jenkins-slave**: Jenkins slave/agent server
+- **sonarqube**: Code quality analysis server
+- **jfrog**: Artifactory repository server
+- **kubernetes-master**: Kubernetes control plane
+- **kubernetes-worker**: Kubernetes worker nodes
+- **monitoring**: Prometheus and Grafana server
 
-## Features
+## 📁 Project Structure
 
-### ✅ Terraform Automation
-- VPC with public subnets across 2 availability zones
-- Security groups with SSH and Jenkins access
-- EC2 instances with Ubuntu 24.04 LTS
-- Automatic SSH key management
+```
+├── terraform/                 # Infrastructure as Code
+│   ├── main.tf               # Main Terraform configuration
+│   ├── outputs.tf            # Outputs and connection info
+│   ├── variables.tf          # Variable definitions
+│   └── private-key/          # SSH keys
+├── ansible/                  # Configuration Management
+│   ├── playbooks/           # Ansible playbooks for each tool
+│   ├── roles/               # Reusable Ansible roles
+│   └── inventory/           # Dynamic inventory
+├── kubernetes/              # Kubernetes configurations
+│   ├── manifests/          # K8s resource definitions
+│   └── helm-charts/        # Helm charts
+├── docker/                 # Docker configurations
+│   ├── images/            # Custom Docker images
+│   └── docker-compose/    # Multi-container setups
+├── jenkins/               # Jenkins configurations
+│   ├── jobs/             # Jenkins job definitions
+│   ├── pipelines/        # Jenkinsfile templates
+│   └── plugins/          # Plugin configurations
+├── monitoring/           # Monitoring stack
+│   ├── prometheus/       # Prometheus configurations
+│   └── grafana/          # Grafana dashboards
+├── maven/               # Maven configurations
+│   └── settings.xml     # Maven settings
+└── scripts/             # Utility scripts
+```
 
-### ✅ Ansible Integration
-- **Automatic Ansible Installation**: Installed on the ansible server during Terraform deployment
-- **Dynamic Inventory**: Automatically generated with correct private IPs
-- **SSH Key Setup**: Properly configured with correct permissions
-- **Host Key Management**: Automatically accepts SSH host keys for all servers
-- **Connection Testing**: Validates Ansible connectivity to all hosts
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 - Terraform installed
@@ -53,147 +97,110 @@ The infrastructure consists of 3 EC2 instances:
    terraform apply
    ```
 
-### What Happens During Deployment
+## 🎯 Tool-Specific Setup
 
-1. **Infrastructure Creation**: Terraform creates VPC, subnets, security groups, and 3 EC2 instances
-2. **Ansible Setup**: After instances are ready, Terraform automatically:
-   - Accepts SSH host keys for all servers
-   - Installs Ansible on the ansible server
-   - Creates `/opt` working directory
-   - Copies and configures SSH keys
-   - Generates inventory file with correct IPs
-   - Updates Ansible configuration
-   - Tests connectivity to all hosts
+### GitHub Integration
+- Webhook configurations for Jenkins
+- Repository access setup
+- Branch protection rules
 
-## Post-Deployment
+### Jenkins Setup
+- Master-slave architecture
+- Pipeline configurations
+- Plugin management
+- Security configurations
 
-### Access Information
-After successful deployment, Terraform will output:
-- Public IPs of all servers
-- SSH connection commands
-- Ansible inventory content
-- Connection information
+### Maven Configuration
+- Repository settings
+- Build profiles
+- Dependency management
 
-### Using Ansible
+### SonarQube
+- Quality gate configurations
+- Project analysis setup
+- Integration with Jenkins
 
-1. **Connect to Ansible server**:
-   ```bash
-   ssh -i private-key/terraform-key ubuntu@<ansible-server-ip>
-   ```
+### JFrog Artifactory
+- Repository configurations
+- Access control
+- Integration with Maven and Docker
 
-2. **Test connectivity**:
-   ```bash
-   ansible -i /opt/hosts all -m ping
-   ```
+### Docker & Kubernetes
+- Container registry setup
+- Kubernetes cluster configuration
+- Helm chart deployment
 
-3. **Run commands on specific hosts**:
-   ```bash
-   # On Jenkins master
-   ansible -i /opt/hosts jenkins-master -m shell -a 'hostname'
-   
-   # On Jenkins slave
-   ansible -i /opt/hosts jenkins-slave -m shell -a 'hostname'
-   ```
+### Monitoring Stack
+- Prometheus metrics collection
+- Grafana dashboards
+- Alert configurations
 
-### Inventory Structure
-The automatically generated inventory file (`/opt/hosts`) contains:
-```
-[jenkins-master]
-<private-ip>
+## 📊 Monitoring & Observability
 
-[jenkins-master:vars]
-ansible_user=ubuntu
-ansible_ssh_private_key_file=/opt/terraform-key
+### Prometheus
+- System metrics collection
+- Application metrics
+- Custom exporters
 
-[jenkins-slave]
-<private-ip>
+### Grafana
+- Pre-configured dashboards
+- Alert rules
+- Data source configurations
 
-[jenkins-slave:vars]
-ansible_user=ubuntu
-ansible_ssh_private_key_file=/opt/terraform-key
-```
+## 🔧 Configuration Management
 
-## Benefits of This Integration
+### Ansible Playbooks
+- Automated tool installation
+- Configuration management
+- Health checks and monitoring
 
-1. **Single Command Deployment**: Everything is set up with one `terraform apply`
-2. **Dynamic IP Management**: No manual IP updates needed
-3. **Consistent Configuration**: Standardized setup across all environments
-4. **Immediate Usability**: Ansible is ready to use immediately after deployment
-5. **Infrastructure as Code**: Complete setup is version controlled and reproducible
+### Dynamic Inventory
+- Automatic host discovery
+- Group-based configurations
+- Environment-specific settings
 
-## Cleanup
+## 🛡️ Security
+
+- SSH key management
+- Security group configurations
+- Access control policies
+- Network segmentation
+
+## 📈 Benefits
+
+1. **Complete DevOps Toolchain**: All essential tools in one setup
+2. **Infrastructure as Code**: Reproducible and version-controlled
+3. **Automated Configuration**: Zero manual configuration required
+4. **Scalable Architecture**: Easy to extend and modify
+5. **Monitoring Integration**: Built-in observability
+6. **Security Best Practices**: Secure by design
+
+## 🧹 Cleanup
 
 To destroy the infrastructure:
 ```bash
 terraform destroy
 ```
 
-## Files Structure
+## 📚 Documentation
 
-```
-├── terraform/
-│   ├── main.tf              # Main Terraform configuration with Ansible automation
-│   ├── outputs.tf           # Outputs including Ansible information
-│   ├── variables.tf         # Variable definitions
-│   ├── terraform.tfvars     # Variable values
-│   └── private-key/         # SSH keys
-├── ansible/
-│   └── README.md            # Original manual setup instructions
-└── README.md                # This file
-```
+Each tool has its own documentation in its respective directory:
+- [Terraform Documentation](./terraform/README.md)
+- [Ansible Documentation](./ansible/README.md)
+- [Kubernetes Documentation](./kubernetes/README.md)
+- [Jenkins Documentation](./jenkins/README.md)
+- [Monitoring Documentation](./monitoring/README.md)
 
-## Troubleshooting
+## 🔄 Next Steps
 
-### SSH Connection Issues
-- Ensure SSH key permissions are correct: `chmod 400 private-key/terraform-key`
-- Check security group allows SSH access
-- Verify instances are fully booted before running Ansible setup
+With this foundation, you can:
+1. Deploy applications using the CI/CD pipeline
+2. Set up custom monitoring dashboards
+3. Implement security scanning
+4. Create custom Helm charts
+5. Configure backup and disaster recovery
+6. Add more tools to the stack
 
-### Ansible Installation Issues
-If Ansible isn't getting installed, try these steps:
+## 🆘 Troubleshooting
 
-1. **Use the test script** to debug the setup:
-   ```bash
-   cd terraform
-   ./test-ansible-setup.sh <ansible-server-ip>
-   ```
-
-2. **Fix SSH key setup** if you see "Permission denied" errors:
-   ```bash
-   cd terraform
-   ./fix-ssh-key.sh <ansible-server-ip>
-   ```
-
-3. **Manual installation** if the automated setup fails:
-   ```bash
-   # Connect to ansible server
-   ssh -i private-key/terraform-key ubuntu@<ansible-server-ip>
-   
-   # Install Ansible manually
-   sudo apt update -y
-   sudo apt install software-properties-common -y
-   sudo add-apt-repository --yes --update ppa:ansible/ansible
-   sudo apt update -y
-   sudo apt install ansible -y
-   ```
-
-4. **Check common issues**:
-   - SSH key permissions (should be 400)
-   - Instance fully booted (wait 2-3 minutes after creation)
-   - Security group allows SSH access
-   - Network connectivity between instances
-   - `/opt` directory permissions (should be 755, owned by ubuntu)
-
-### Ansible Connection Issues
-- Verify SSH key is properly copied to `/opt/terraform-key` on ansible server
-- Check inventory file contains correct private IPs
-- Ensure all instances are in the same VPC for private IP communication
-
-## Next Steps
-
-With this foundation, you can now:
-1. Create Ansible playbooks for Jenkins installation
-2. Set up CI/CD pipelines
-3. Configure monitoring and logging
-4. Implement backup strategies
-5. Add more infrastructure components
+See individual tool documentation for specific troubleshooting guides, or check the [Troubleshooting Guide](./docs/troubleshooting.md) for common issues.
