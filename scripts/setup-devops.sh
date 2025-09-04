@@ -223,11 +223,11 @@ services:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
       - SONAR_WEB_JAVAOPTS=-Xmx512m -Xms128m -XX:MaxDirectMemorySize=256m -XX:+HeapDumpOnOutOfMemoryError
 
-  jfrog:
+  nexus:
     environment:
-      - ARTIFACTORY_HOME=/var/opt/jfrog/artifactory
-      - ARTIFACTORY_USER=admin
-      - ARTIFACTORY_PASSWORD=${ADMIN_PASSWORD}
+      - INSTALL4J_ADD_VM_PARAMS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=273m
+      - NEXUS_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - NEXUS_SECURITY_RANDOMPASSWORD=false
 
   grafana:
     environment:
@@ -289,10 +289,10 @@ scrape_configs:
       - targets: ['sonarqube:9000']
     metrics_path: /api/metrics
 
-  - job_name: 'jfrog'
+  - job_name: 'nexus'
     static_configs:
-      - targets: ['jfrog:8081']
-    metrics_path: /artifactory/api/v1/metrics
+      - targets: ['nexus:8081']
+    metrics_path: /service/metrics/prometheus
 EOF
     
     # Grafana datasources
@@ -375,8 +375,8 @@ jenkins-slave ansible_host=localhost
 [sonarqube]
 sonarqube ansible_host=localhost
 
-[jfrog]
-jfrog ansible_host=localhost
+[nexus]
+nexus ansible_host=localhost
 
 [kubernetes-master]
 kubernetes-master ansible_host=localhost
@@ -391,7 +391,7 @@ monitoring ansible_host=localhost
 jenkins-master
 jenkins-slave
 sonarqube
-jfrog
+nexus
 kubernetes-master
 kubernetes-worker
 monitoring
@@ -467,9 +467,9 @@ docker exec jenkins tar czf - /var/jenkins_home > "$BACKUP_DIR/jenkins_$DATE.tar
 log "Backing up SonarQube..."
 docker exec sonarqube tar czf - /opt/sonarqube/data > "$BACKUP_DIR/sonarqube_$DATE.tar.gz"
 
-# Backup JFrog Artifactory
-log "Backing up JFrog Artifactory..."
-docker exec jfrog tar czf - /var/opt/jfrog/artifactory > "$BACKUP_DIR/jfrog_$DATE.tar.gz"
+# Backup Nexus
+log "Backing up Nexus..."
+docker exec nexus tar czf - /nexus-data > "$BACKUP_DIR/nexus_$DATE.tar.gz"
 
 # Backup PostgreSQL
 log "Backing up PostgreSQL..."
@@ -530,11 +530,11 @@ else
     exit 1
 fi
 
-# Check JFrog Artifactory
+# Check Nexus
 if curl -f http://localhost:8081/artifactory > /dev/null 2>&1; then
-    log "JFrog Artifactory: OK"
+    log "Nexus: OK"
 else
-    log "JFrog Artifactory: FAILED"
+    log "Nexus: FAILED"
     exit 1
 fi
 
@@ -599,7 +599,7 @@ display_access_info() {
     echo "=================="
     echo "Jenkins:          http://localhost:8080"
     echo "SonarQube:        http://localhost:9000"
-    echo "JFrog Artifactory: http://localhost:8081/artifactory"
+    echo "Nexus:            http://localhost:8081/artifactory"
     echo "Grafana:          http://localhost:3000"
     echo "Prometheus:       http://localhost:9090"
     echo "PostgreSQL:       localhost:5432"
@@ -620,7 +620,7 @@ display_access_info() {
     echo "==========="
     echo "1. Access Jenkins and complete initial setup"
     echo "2. Configure SonarQube quality gates"
-    echo "3. Set up JFrog Artifactory repositories"
+    echo "3. Set up Nexus repositories"
     echo "4. Import Grafana dashboards"
     echo "5. Configure monitoring alerts"
     echo "6. Set up CI/CD pipelines"
