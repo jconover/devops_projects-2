@@ -5,8 +5,8 @@ services:
     container_name: jenkins
     restart: unless-stopped
     ports:
-      - "8091:8080"
-      - "50001:50000"
+      - "30080:8080"  # Jenkins Web UI
+      - "30050:50000" # Jenkins Agent
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
     volumes:
@@ -21,7 +21,7 @@ services:
     container_name: sonarqube
     restart: unless-stopped
     ports:
-      - "9001:9000"
+      - "30090:9000"  # SonarQube Web UI
     environment:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
       - SONAR_JDBC_URL=jdbc:postgresql://postgres:5432/sonarqube
@@ -42,7 +42,7 @@ services:
     container_name: nexus
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "30081:8081"  # Nexus Repository Web UI
     environment:
       - INSTALL4J_ADD_VM_PARAMS=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=273m
     volumes:
@@ -55,6 +55,8 @@ services:
     image: postgres:15-alpine
     container_name: postgres
     restart: unless-stopped
+    ports:
+      - "30032:5432"  # PostgreSQL
     environment:
       - POSTGRES_DB=sonarqube
       - POSTGRES_USER=sonarqube
@@ -70,7 +72,7 @@ services:
     container_name: redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "30079:6379"  # Redis
     volumes:
       - redis_data:/data
     networks:
@@ -82,7 +84,7 @@ services:
     container_name: prometheus
     restart: unless-stopped
     ports:
-      - "9091:9090"
+      - "30091:9090"  # Prometheus Web UI
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -101,7 +103,7 @@ services:
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "30030:3000"  # Grafana Web UI
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
@@ -117,7 +119,7 @@ services:
     container_name: node-exporter
     restart: unless-stopped
     ports:
-      - "9101:9100"
+      - "30100:9100"  # Node Exporter
     command:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
