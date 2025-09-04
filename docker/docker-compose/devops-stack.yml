@@ -5,8 +5,8 @@ services:
     container_name: jenkins
     restart: unless-stopped
     ports:
-      - "8080:8080"
-      - "50000:50000"
+      - "8081:8080"
+      - "50001:50000"
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
     volumes:
@@ -82,7 +82,7 @@ services:
     container_name: prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "9091:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
