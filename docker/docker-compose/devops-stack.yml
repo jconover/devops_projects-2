@@ -5,7 +5,7 @@ services:
     container_name: jenkins
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "8091:8080"
       - "50001:50000"
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
