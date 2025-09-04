@@ -50,7 +50,7 @@ Once the setup is complete, you can access the following services:
 | Service | URL | Default Credentials |
 |---------|-----|-------------------|
 | Jenkins | http://localhost:8080 | admin / admin123 |
-| SonarQube | http://localhost:9000 | admin / admin123 |
+| SonarQube | http://localhost:9000 | admin / admin |
 | Sonatype Nexus Repository | http://localhost:8081 | admin / admin123 |
 | Grafana | http://localhost:3000 | admin / admin123 |
 | Prometheus | http://localhost:9090 | - |
