@@ -291,7 +291,7 @@ scrape_configs:
 
   - job_name: 'nexus'
     static_configs:
-      - targets: ['nexus:8081']
+      - targets: ['nexus:30081']
     metrics_path: /service/metrics/prometheus
 EOF
     
@@ -531,7 +531,7 @@ else
 fi
 
 # Check Nexus
-if curl -f http://localhost:8081/artifactory > /dev/null 2>&1; then
+if curl -f http://localhost:30081/artifactory > /dev/null 2>&1; then
     log "Nexus: OK"
 else
     log "Nexus: FAILED"
