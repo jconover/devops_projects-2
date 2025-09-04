@@ -17,7 +17,7 @@ services:
 
   # SonarQube
   sonarqube:
-    image: sonarqube:10.2.1-community
+    image: sonarqube:lts-community
     container_name: sonarqube
     restart: unless-stopped
     ports:
